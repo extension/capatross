@@ -34,6 +34,14 @@ Capistrano::Configuration.instance(:must_exist).load do
         put File.open(logger.log_file_path).read, "#{shared_path}/deploy_logs/#{logger.remote_log_file_name}"
       end
     end
+    
+    desc "display known capatross environment settings"
+    task :settings do 
+      puts "Git username: #{capatross_core.gitutils.user_name}"
+      puts "Git email: #{capatross_core.gitutils.user_email}"
+      puts "Currently deployed revision: #{current_revision}"
+    end
+      
   end
 end
 

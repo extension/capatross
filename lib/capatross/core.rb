@@ -145,16 +145,7 @@ module Capatross
     end
       
     protected 
-      
-      
-    def erberize(string,context,binding)
-      begin
-        ERB.new(string).result(binding)
-      rescue NameError => error
-        raise TemplateError, "Your #{context} message references an undefined value: #{error.name}. Set this in your capistrano deploy script"
-      end
-    end
-        
+            
       
     # Takes a period of time in seconds and returns it in human-readable form (down to minutes)
     # code from http://www.postal-code.com/binarycode/2007/04/04/english-friendly-timespan/

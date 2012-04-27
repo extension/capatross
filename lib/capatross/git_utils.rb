@@ -25,15 +25,19 @@ module Capatross
       end
       @localrepo
     end
-     
+    
+    def gitconfig
+      @gitconfig ||= Grit::Config.new(localrepo)
+    end
+   
     def user_name
-      if(localrepo)
-        git_config = Grit::Config.new(localrepo)
-        git_config.fetch('user.name')
-      else
-        nil
-      end
-    end          
+      @user_name ||= gitconfig.fetch('user.name')
+    end
+    
+    def user_email
+      @user_email ||= gitconfig.fetch('user.email')
+    end
+
   end
 end
 
