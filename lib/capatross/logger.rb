@@ -112,10 +112,6 @@ module Capistrano
       @_log_file_path
     end
     
-    def self.remote_log_file_name
-      @_log_file_name ||= "deploy-#{@_configuration[:release_name]}-#{self.successful? ? "success" : "failure"}.log"
-    end
-    
     def self.close
       @_deploy_log_file.flush unless @_deploy_log_file.nil?
       @_deploy_log_file.close unless @_deploy_log_file.nil?

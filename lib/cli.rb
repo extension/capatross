@@ -32,9 +32,16 @@ module Capatross
       def add_local_to_gitignore
         gitignore_file = './.gitignore'
         if(File.exists?(gitignore_file))
+          # local configuration
           if(!(File.read(gitignore_file) =~ %r{config/capatross.local.yml}))
-            append_file(gitignore_file,"config/capatross.local.yml\n")
+            append_file(gitignore_file,"/config/capatross.local.yml\n")
           end
+          
+          # deploylogs
+          if(!(File.read(gitignore_file) =~ %r{capatross_logs}))
+            append_file(gitignore_file,"/capatross_logs\n")
+          end
+                  
         end
       end
       

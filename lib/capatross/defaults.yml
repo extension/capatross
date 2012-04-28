@@ -1,1 +1,2 @@
 copy_log_to_server: true
+application_id: 'not_specified'
