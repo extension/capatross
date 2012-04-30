@@ -15,7 +15,8 @@ Capistrano::Configuration.instance(:must_exist).load do
     task :pre_announce do
       set(:whereto,capatross_core.whereto(self))
       capatross_core.merge_deploydata(capatross_id: capatross_core.capatross_id,
-                                      deployer_email: capatross_core.gitutils.user_email, 
+                                      deployer_email: capatross_core.gitutils.user_email,
+                                      deployer_name:  capatross_deployer,
                                       previous_revision: current_revision,
                                       location: whereto)
       logger.info "#{capatross_deployer} is starting to deploy #{application} to #{whereto}"

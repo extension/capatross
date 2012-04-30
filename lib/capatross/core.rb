@@ -13,7 +13,7 @@ module Capatross
     def initialize
       @settings = Options.new
       @settings.load!
-      @deploydata = {}
+      @deploydata = {:appkey => @settings.appkey}
     end
     
     def local_deployer
@@ -42,7 +42,7 @@ module Capatross
     def capatross_id
       if(@capatross_id.nil?)
         randval = rand
-        @capatross_id = Digest::SHA1.hexdigest(settings.application_id+randval.to_s)
+        @capatross_id = Digest::SHA1.hexdigest(settings.appkey+Time.now.to_s+randval.to_s)
       end
       @capatross_id
     end
