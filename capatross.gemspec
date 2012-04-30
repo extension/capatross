@@ -18,4 +18,5 @@ Gem::Specification.new do |gem|
   gem.version       = Capatross::VERSION
   gem.add_dependency('capistrano', '>= 2.11')
   gem.add_dependency('grit', '>= 2.4')
+  gem.add_dependency('httparty', '>= 0.8')
 end

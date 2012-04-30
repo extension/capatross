@@ -1,2 +1,4 @@
 copy_log_to_server: true
 appkey: 'not_specified'
+albatross_uri: 'http://albatross.dev' 
+albatross_deploy_path: '/deploys'

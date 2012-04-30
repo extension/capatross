@@ -4,6 +4,7 @@
 # see LICENSE file
 require 'capistrano'
 require 'grit'
+require 'httparty'
 
 require 'capatross/logger'
 require 'capatross/version'

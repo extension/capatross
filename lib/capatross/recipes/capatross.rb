@@ -18,19 +18,23 @@ Capistrano::Configuration.instance(:must_exist).load do
                                       deployer_email: capatross_core.gitutils.user_email,
                                       deployer_name:  capatross_deployer,
                                       previous_revision: current_revision,
+                                      start: Time.now,
                                       location: whereto)
+      capatross_core.post_deploydata
       logger.info "#{capatross_deployer} is starting to deploy #{application} to #{whereto}"
     end
     
     task :post_announce_success do
       set(:whereto,capatross_core.whereto(self))
-      capatross_core.merge_deploydata(deployed_revision: current_revision, success: true)    
+      capatross_core.merge_deploydata(deployed_revision: current_revision, success: true, finish: Time.now)
+      capatross_core.post_deploydata    
       logger.info "#{capatross_deployer} successfully deployed #{application} to #{whereto}"
     end
     
     task :post_announce_failure do
       set(:whereto,capatross_core.whereto(self))
       capatross_core.merge_deploydata(success: false)
+      capatross_core.post_deploydata
       logger.error "The deploy of #{application} to #{whereto} by #{capatross_deployer} failed."
     end
     

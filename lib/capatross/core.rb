@@ -8,6 +8,8 @@ module Capatross
   end
     
   class Core
+    include HTTParty
+    
     attr_accessor :settings
     
     def initialize
@@ -26,6 +28,12 @@ module Capatross
       else
         nil
       end
+    end
+    
+    def post_deploydata
+      self.class.post("#{settings.albatross_uri}#{settings.albatross_deploy_path}",
+                      :body => deploydata,
+                      :headers => { 'ContentType' => 'application/json' })
     end
       
     def gitutils
@@ -51,15 +59,18 @@ module Capatross
       @deploydata.merge!(hash)
     end
     
-    def write_deploydata
+    def deploydata
       if(@deploydata[:capatross_id].nil?)
         @deploydata[:capatross_id] = capatross_id
       end
-      
+      @deploydata
+    end
+    
+    def write_deploydata
       outputdir = "./capatross_logs"
-      ouptputfile = File.join(outputdir,"#{@deploydata[:capatross_id]}.json")
+      ouptputfile = File.join(outputdir,"#{deploydata[:capatross_id]}.json")
       FileUtils.mkdir_p(outputdir)
-      File.open(ouptputfile, 'w') {|f| f.write(@deploydata.to_json) }
+      File.open(ouptputfile, 'w') {|f| f.write(deploydata.to_json) }
       ouptputfile
     end
         
