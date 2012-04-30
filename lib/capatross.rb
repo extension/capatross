@@ -28,6 +28,6 @@ if Capistrano::Configuration.instance
   Capistrano::Configuration.instance(:must_exist).load do
     # load the recipes
     Dir.glob(File.join(File.dirname(__FILE__), '/capatross/recipes/*.rb')).sort.each { |f| load f }
-    before "deploy", "capatross:pre_announce"
+    before "deploy", "capatross:start"
   end
 end

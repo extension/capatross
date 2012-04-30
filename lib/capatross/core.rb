@@ -31,9 +31,10 @@ module Capatross
     end
     
     def post_deploydata
-      self.class.post("#{settings.albatross_uri}#{settings.albatross_deploy_path}",
-                      :body => deploydata,
-                      :headers => { 'ContentType' => 'application/json' })
+      result = self.class.post("#{settings.albatross_uri}#{settings.albatross_deploy_path}",
+                               :body => deploydata,
+                               :headers => { 'ContentType' => 'application/json' })
+      return (result.response.code == '200')
     end
       
     def gitutils

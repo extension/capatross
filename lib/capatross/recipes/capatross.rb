@@ -12,7 +12,7 @@ Capistrano::Configuration.instance(:must_exist).load do
   namespace :capatross do
     
     ## no descriptions for the following tasks - meant to be hooked by capistrano
-    task :pre_announce do
+    task :start do
       set(:whereto,capatross_core.whereto(self))
       capatross_core.merge_deploydata(capatross_id: capatross_core.capatross_id,
                                       deployer_email: capatross_core.gitutils.user_email,
@@ -20,21 +20,24 @@ Capistrano::Configuration.instance(:must_exist).load do
                                       previous_revision: current_revision,
                                       start: Time.now,
                                       location: whereto)
-      capatross_core.post_deploydata
+      start_posted = capatross_core.post_deploydata
+      capatross_core.merge_deploydata(start_posted: start_posted)
       logger.info "#{capatross_deployer} is starting to deploy #{application} to #{whereto}"
     end
     
-    task :post_announce_success do
+    task :finish_success do
       set(:whereto,capatross_core.whereto(self))
       capatross_core.merge_deploydata(deployed_revision: current_revision, success: true, finish: Time.now)
-      capatross_core.post_deploydata    
+      finish_posted = capatross_core.post_deploydata
+      capatross_core.merge_deploydata(finish_posted: finish_posted)
       logger.info "#{capatross_deployer} successfully deployed #{application} to #{whereto}"
     end
     
-    task :post_announce_failure do
+    task :finish_failure do
       set(:whereto,capatross_core.whereto(self))
       capatross_core.merge_deploydata(success: false)
-      capatross_core.post_deploydata
+      finish_posted = capatross_core.post_deploydata
+      capatross_core.merge_deploydata(finish_posted: finish_posted)
       logger.error "The deploy of #{application} to #{whereto} by #{capatross_deployer} failed."
     end
     
@@ -47,17 +50,10 @@ Capistrano::Configuration.instance(:must_exist).load do
         put File.open(outputfile).read, "#{shared_path}/deploy_logs/#{File.basename(outputfile)}"
       end
     end
-    
-    desc "display known capatross environment settings"
-    task :settings do 
-      puts "Git username: #{capatross_core.gitutils.user_name}"
-      puts "Git email: #{capatross_core.gitutils.user_email}"
-      puts "Currently deployed revision: #{current_revision}"
-    end
-      
+          
   end
 end
 
-Capistrano::CapatrossLogger.post_process_hook("capatross:post_announce_success",:success)
-Capistrano::CapatrossLogger.post_process_hook("capatross:post_announce_failure",:failure)
+Capistrano::CapatrossLogger.post_process_hook("capatross:finish_success",:success)
+Capistrano::CapatrossLogger.post_process_hook("capatross:finish_failure",:failure)
 Capistrano::CapatrossLogger.post_process_hook("capatross:copy_log",:any)
