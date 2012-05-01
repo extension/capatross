@@ -51,7 +51,7 @@ module Capatross
     def capatross_id
       if(@capatross_id.nil?)
         randval = rand
-        @capatross_id = Digest::SHA1.hexdigest(settings.appkey+Time.now.to_s+randval.to_s)
+        @capatross_id = Digest::SHA1.hexdigest(settings.appkey+Time.now.to_s+randval.to_s)[8..16]
       end
       @capatross_id
     end
