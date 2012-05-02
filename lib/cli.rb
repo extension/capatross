@@ -20,6 +20,10 @@ module Capatross
     
     no_tasks do
       
+      def logsdir
+        './capatross_logs'
+      end
+      
       def copy_configs
         # campout.yml
         destination = "./config/capatross.yml"
@@ -57,6 +61,40 @@ module Capatross
           end
         end
       end
+            
+      def deploy_logs(dump_log_output=true)
+        deploy_logs = []
+        # loop through the files
+        Dir.glob(File.join(logsdir,'*.json')).sort.each do |logfile|
+          logdata = JSON.parse(File.read(logfile))
+          if(dump_log_output)
+            logdata.delete('deploy_log')
+          end
+          deploy_logs << logdata
+        end
+        
+        deploy_logs
+      end
+      
+      def settings
+        if(@settings.nil?)
+          @settings = Capatross::Options.new
+          @settings.load!
+        end
+        
+        @settings
+      end
+      
+      def post_to_deploy_server(logdata)
+        # indicate that this is coming from the cli
+        logdata['from_cli'] = true
+        result = HTTParty.post("#{settings.albatross_uri}#{settings.albatross_deploy_path}",
+                                :body => logdata,
+                                :headers => { 'ContentType' => 'application/json' })
+                              
+        result
+      end
+        
     end
 
 
@@ -73,21 +111,11 @@ module Capatross
     end
     
     desc "list", "list local deploys"
-    #method_option :source, :default => 'local', :aliases => "-s", :desc => "Source of the d"
     def list
-      logsdir = './capatross_logs'
       if(!File.exists?(logsdir))
          say("Error: Capatross log directory (#{logsdir}) not present", :red)
       end
-      
-      deploy_logs = []
-      # loop through the files
-      Dir.glob(File.join(logsdir,'*.json')).sort.each do |logfile|
-        logdata = JSON.parse(File.read(logfile))
-        logdata.delete('deploy_log')
-        deploy_logs << logdata
-      end      
-      
+          
       deploy_logs.sort_by{|log| log['start']}.each do |log|
         if(log['success'])
           message = "#{log['capatross_id']} : Revision: #{log['deployed_revision']} deployed at #{log['start'].to_s} to #{log['location']}"
@@ -106,7 +134,6 @@ module Capatross
     end
     
     desc "post", "post or repost the logdata from the specified local deploy"
-    #method_option :source, :default => 'local', :aliases => "-s", :desc => "Source of the d"
     method_option :log, :aliases => '-l', :type => :string, :required => true, :desc => "The capatross deploy id to post/repost (use 'list' to show known deploys)"
     def post
       logfile = "./capatross_logs/#{options[:log]}.json"
@@ -114,16 +141,8 @@ module Capatross
          say("Error: The specified capatross log (#{options[:log]}) was not found", :red)
       end
       logdata = JSON.parse(File.read(logfile))
-      
-      
-      settings = Capatross::Options.new
-      settings.load!
-      
-      result = HTTParty.post("#{settings.albatross_uri}#{settings.albatross_deploy_path}",
-                              :body => logdata,
-                              :headers => { 'ContentType' => 'application/json' })
-                              
-      if(result.response.code == '200')
+                        
+      if(post_to_deploy_server(logdata))
         say("Log data posted to #{settings.albatross_uri}#{settings.albatross_deploy_path}")
         # update that we posted
         logdata['finish_posted'] = true
@@ -132,6 +151,33 @@ module Capatross
         say("Unable to post log data to #{settings.albatross_uri}#{settings.albatross_deploy_path} (Code: #{result.response.code })",:red)
       end
     end
+    
+    desc "sync", "post all unposted deploys"
+    def sync
+      if(!File.exists?(logsdir))
+         say("Error: Capatross log directory (#{logsdir}) not present", :red)
+      end
+      
+      deploy_logs(false).each do |log|
+        if(!log['finish_posted'])
+          result = post_to_deploy_server(log)
+          if(result.response.code == '200')
+            say("#{log['capatross_id']} data posted to #{settings.albatross_uri}#{settings.albatross_deploy_path}")
+            # update that we posted
+            log['finish_posted'] = true
+            logfile = File.join(logsdir,"#{log['capatross_id']}.json")
+            File.open(logfile, 'w') {|f| f.write(log.to_json) }
+          else
+            say("Unable to post #{log['capatross_id']} data to #{settings.albatross_uri}#{settings.albatross_deploy_path} (Code: #{result.response.code })",:red)
+          end
+        end
+      end
+      
+    end
+    # 
+    # desc "prune", "prune old deploy logs"
+    # def prune
+    # end
               
   end
   
