@@ -31,7 +31,7 @@ Capistrano::Configuration.instance(:must_exist).load do
       if(logger.successful?)
         capatross_core.merge_deploydata(deployed_revision: current_revision, success: true, finish: Time.now.utc)
       else
-        capatross_core.merge_deploydata(success: false)
+        capatross_core.merge_deploydata(success: false, finish: Time.now.utc)
       end
       
       capatross_core.merge_deploydata(deploy_log: File.open(logger.log_file_path).read)
