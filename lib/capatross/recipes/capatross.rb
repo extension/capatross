@@ -11,7 +11,7 @@
 Capistrano::Configuration.instance(:must_exist).load do
   namespace :capatross do
       
-    ## no descriptions for the following tasks - meant to be hooked by capistrano
+    ## no descriptions for the following task - meant to be hooked by capistrano
     task :start do
       set(:whereto,capatross_core.whereto(self))
       capatross_core.merge_deploydata(capatross_id: capatross_core.capatross_id,
@@ -24,6 +24,7 @@ Capistrano::Configuration.instance(:must_exist).load do
       capatross_core.merge_deploydata(start_posted: start_posted)
     end
     
+    ## no descriptions for the following task - meant to be hooked by capistrano
     task :finish do
       set(:whereto,capatross_core.whereto(self))
       logger = Capistrano::CapatrossLogger
@@ -38,10 +39,10 @@ Capistrano::Configuration.instance(:must_exist).load do
       capatross_core.merge_deploydata(finish_posted: finish_posted)
       outputfile = capatross_core.write_deploydata
       if(capatross_core.settings.copy_log_to_server)
-        run "mkdir -p #{shared_path}/deploy_logs"
-        put File.open(outputfile).read, "#{shared_path}/deploy_logs/#{File.basename(outputfile)}"
+        run "mkdir -p #{shared_path}/capatross_logs"
+        put File.open(outputfile).read, "#{shared_path}/capatross_logs/#{File.basename(outputfile)}"
       end      
-    end
+    end  
               
   end
 end
