@@ -20,6 +20,9 @@ Capistrano::Configuration.instance(:must_exist).load do
                                       previous_revision: current_revision,
                                       start: Time.now.utc,
                                       location: whereto)
+      if(ENV['COMMENT'])
+        capatross_core.merge_deploydata(comment: ENV['COMMENT'])
+      end
       start_posted = capatross_core.post_deploydata
       capatross_core.merge_deploydata(start_posted: start_posted)
     end
