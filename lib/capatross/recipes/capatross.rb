@@ -32,7 +32,7 @@ Capistrano::Configuration.instance(:must_exist).load do
       set(:whereto,capatross_core.whereto(self))
       logger = Capistrano::CapatrossLogger
       if(logger.successful?)
-        capatross_core.merge_deploydata(deployed_revision: current_revision, success: true, finish: Time.now.utc)
+        capatross_core.merge_deploydata(deployed_revision: latest_revision, success: true, finish: Time.now.utc)
       else
         capatross_core.merge_deploydata(success: false, finish: Time.now.utc)
       end
