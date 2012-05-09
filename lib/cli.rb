@@ -30,11 +30,6 @@ module Capatross
         if(!File.exists?(destination))
           copy_file('templates/capatross.yml',destination)
         end
-        #
-        destination = "./config/capatross.local.yml"
-        if(!File.exists?(destination))
-          copy_file('templates/capatross.local.yml',destination)
-        end
       end
             
       def add_local_to_gitignore
