@@ -37,12 +37,12 @@ module Capatross
         if(File.exists?(gitignore_file))
           # local configuration
           if(!(File.read(gitignore_file) =~ %r{config/capatross.local.yml}))
-            append_file(gitignore_file,"/config/capatross.local.yml\n")
+            append_file(gitignore_file,"\n# added by capatross generate_config\n/config/capatross.local.yml\n")
           end
           
           # deploylogs
           if(!(File.read(gitignore_file) =~ %r{capatross_logs}))
-            append_file(gitignore_file,"/capatross_logs\n")
+            append_file(gitignore_file,"\n# added by capatross generate_config\n/capatross_logs\n")
           end
                   
         end
@@ -52,7 +52,7 @@ module Capatross
         cap_deploy_script = './config/deploy.rb'
         if(File.exists?(cap_deploy_script))
           if(!(File.read(cap_deploy_script) =~ %r{require ['|"]capatross["|']}))
-            prepend_file(cap_deploy_script,"require 'capatross'\n")
+            prepend_file(cap_deploy_script,"\n# added by capatross generate_config\nrequire 'capatross'\n")
           end
         end
       end
