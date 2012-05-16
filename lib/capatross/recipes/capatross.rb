@@ -14,17 +14,17 @@ Capistrano::Configuration.instance(:must_exist).load do
     ## no descriptions for the following task - meant to be hooked by capistrano
     task :start do
       set(:whereto,capatross_core.whereto(self))
-      capatross_core.merge_deploydata(capatross_id: capatross_core.capatross_id,
-                                      deployer_email: capatross_core.gitutils.user_email,
-                                      deployer_name:  capatross_deployer,
-                                      previous_revision: current_revision,
-                                      start: Time.now.utc,
-                                      location: whereto)
+      capatross_core.merge_deploydata(:capatross_id => capatross_core.capatross_id,
+                                      :deployer_email => capatross_core.gitutils.user_email,
+                                      :deployer_name =>  capatross_deployer,
+                                      :previous_revision => current_revision,
+                                      :start => Time.now.utc,
+                                      :location =>  whereto)
       if(ENV['COMMENT'])
-        capatross_core.merge_deploydata(comment: ENV['COMMENT'])
+        capatross_core.merge_deploydata(:comment => ENV['COMMENT'])
       end
       start_posted = capatross_core.post_deploydata
-      capatross_core.merge_deploydata(start_posted: start_posted)
+      capatross_core.merge_deploydata(:start_posted => start_posted)
     end
     
     ## no descriptions for the following task - meant to be hooked by capistrano
@@ -32,14 +32,14 @@ Capistrano::Configuration.instance(:must_exist).load do
       set(:whereto,capatross_core.whereto(self))
       logger = Capistrano::CapatrossLogger
       if(logger.successful?)
-        capatross_core.merge_deploydata(deployed_revision: latest_revision, success: true, finish: Time.now.utc)
+        capatross_core.merge_deploydata(:deployed_revision => latest_revision, :success => true, :finish => Time.now.utc)
       else
-        capatross_core.merge_deploydata(success: false, finish: Time.now.utc)
+        capatross_core.merge_deploydata(:success => false, :finish => Time.now.utc)
       end
       
-      capatross_core.merge_deploydata(deploy_log: File.open(logger.log_file_path).read)
+      capatross_core.merge_deploydata(:deploy_log => File.open(logger.log_file_path).read)
       finish_posted = capatross_core.post_deploydata
-      capatross_core.merge_deploydata(finish_posted: finish_posted)
+      capatross_core.merge_deploydata(:finish_posted => finish_posted)
       outputfile = capatross_core.write_deploydata
       if(capatross_core.settings.copy_log_to_server)
         run "mkdir -p #{shared_path}/capatross_logs"
