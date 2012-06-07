@@ -9,6 +9,7 @@ require 'capatross/version'
 require 'capatross/options'
 require 'capatross/deep_merge' unless defined?(DeepMerge)
 require 'httparty'
+
 module Capatross
   class CLI < Thor
     include Thor::Actions
@@ -87,7 +88,26 @@ module Capatross
                                 :body => logdata,
                                 :headers => { 'ContentType' => 'application/json' })
                               
+        
+
         result
+      end
+      
+      def check_post_result(response)
+        if(!response.code == '200')
+          return false
+        else
+          begin
+            parsed_response = response.parsed_response
+            if(parsed_response['success'])
+              return true
+            else
+              return false
+            end
+          rescue
+            return false
+          end
+        end
       end
         
     end
@@ -136,8 +156,9 @@ module Capatross
          say("Error: The specified capatross log (#{options[:log]}) was not found", :red)
       end
       logdata = JSON.parse(File.read(logfile))
-                        
-      if(post_to_deploy_server(logdata))
+      
+      result = post_to_deploy_server(logdata)
+      if(check_post_result(result))                        
         say("Log data posted to #{settings.albatross_uri}#{settings.albatross_deploy_path}")
         # update that we posted
         logdata['finish_posted'] = true
@@ -156,7 +177,7 @@ module Capatross
       deploy_logs(false).each do |log|
         if(!log['finish_posted'])
           result = post_to_deploy_server(log)
-          if(result.response.code == '200')
+          if(check_post_result(result))
             say("#{log['capatross_id']} data posted to #{settings.albatross_uri}#{settings.albatross_deploy_path}")
             # update that we posted
             log['finish_posted'] = true
