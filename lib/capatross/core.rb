@@ -34,7 +34,20 @@ module Capatross
       result = self.class.post("#{settings.albatross_uri}#{settings.albatross_deploy_path}",
                                :body => deploydata,
                                :headers => { 'ContentType' => 'application/json' })
-      return (result.response.code == '200')
+      if(!result.response.code == '200')
+        return false
+      else
+        begin
+          parsed_response = result.response.parsed_response
+          if(parsed_response['success'])
+            return true
+          else
+            return false
+          end
+        rescue
+          return false
+        end
+      end
     end
       
     def gitutils
