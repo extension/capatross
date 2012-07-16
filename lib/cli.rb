@@ -8,7 +8,7 @@ require 'json'
 require 'capatross/version'
 require 'capatross/options'
 require 'capatross/deep_merge' unless defined?(DeepMerge)
-require 'httparty'
+require 'rest-client'
 
 module Capatross
   class CLI < Thor
@@ -84,21 +84,21 @@ module Capatross
       def post_to_deploy_server(logdata)
         # indicate that this is coming from the cli
         logdata['from_cli'] = true
-        result = HTTParty.post("#{settings.albatross_uri}#{settings.albatross_deploy_path}",
-                                :body => logdata,
-                                :headers => { 'ContentType' => 'application/json' })
-                              
-        
-
-        result
+        begin
+          RestClient.post("#{settings.albatross_uri}#{settings.albatross_deploy_path}",
+                          logdata.to_json,
+                          :content_type => :json, :accept => :json)
+        rescue=> e
+          e.response
+        end
       end
       
       def check_post_result(response)
-        if(!response.code == '200')
+        if(!response.code == 200)
           return false
         else
           begin
-            parsed_response = response.parsed_response
+            parsed_response = JSON.parse(response)
             if(parsed_response['success'])
               return true
             else

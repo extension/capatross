@@ -7,9 +7,7 @@ module Capatross
   class TemplateError < NameError
   end
     
-  class Core
-    include HTTParty
-    
+  class Core    
     attr_accessor :settings
     
     def initialize
@@ -31,14 +29,19 @@ module Capatross
     end
     
     def post_deploydata
-      result = self.class.post("#{settings.albatross_uri}#{settings.albatross_deploy_path}",
-                               :body => deploydata,
-                               :headers => { 'ContentType' => 'application/json' })
-      if(!result.response.code == '200')
+      begin
+        response = RestClient.post("#{settings.albatross_uri}#{settings.albatross_deploy_path}",
+                        deploydata.to_json,
+                        :content_type => :json, :accept => :json)
+      rescue=> e
+        response = e.response
+      end
+      
+      if(!response.code == 200)
         return false
       else
         begin
-          parsed_response = result.response.parsed_response
+          parsed_response = JSON.parse(response)
           if(parsed_response['success'])
             return true
           else
@@ -49,7 +52,7 @@ module Capatross
         end
       end
     end
-      
+    
     def gitutils
       @gitutils ||= GitUtils.new('.')
     end
