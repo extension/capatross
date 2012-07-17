@@ -27,7 +27,12 @@ module Capatross
         if !ENV["RAILS_ENV"] || ENV["RAILS_ENV"] == ""
           ENV["RAILS_ENV"] = environment
         end
-        require "./config/environment"
+        begin
+          require "./config/environment"
+        rescue LoadError
+          puts 'capatross uses rails for certain features, it appears you are not at the root of a rails application, exiting...'
+          exit(1)
+        end
       end
           
       def logsdir
@@ -212,28 +217,42 @@ module Capatross
     
     desc "getdata", "Download and replace my local database with new data"
     method_option :environment,:default => 'development', :aliases => "-e", :desc => "Rails environment"
+    method_option :dbsettings,:default => 'development', :aliases => "-d", :desc => "database.yml settings"
     def getdata
       load_rails(options[:environment])
       
       # check for required settings
-      exit(1) if !check_settings(['getdata_host','getdata_file','getdata_path','getdata_user','getdata_mysqlbin'])
+      exit(1) if !check_settings(['getdata_host','getdata_path','getdata_user','getdata_mysqlbin'])
       
       # download the file
-      remotefile = "#{settings.getdata_path}/#{settings.getdata_file}.gz"
+      if(!settings.getdata_files.nil?)
+        datafile = settings.getdata_files.send(options[:dbsettings])
+        if(datafile.nil?)
+          puts "No datafile specified for #{options[:dbsettings]}"
+          exit(1)
+        end
+      elsif(!settings.getdata_file.nil?)
+        datafile = settings.getdata_file
+      else
+        puts "Please set getdata_files['#{options[:dbsettings]}'] or getdata_file in the capatross settings"
+        exit(1)
+      end
+        
+      remotefile = "#{settings.getdata_path}/#{datafile}.gz"
       say "Downloading #{remotefile} from #{settings.getdata_host} (this might take a while)..."
       Net::SSH.start(settings.getdata_host, settings.getdata_user, :port => 24) do |ssh|
-        ssh.scp.download!(remotefile,"#{Rails.root.to_s}/tmp/#{settings.getdata_file}.gz") do |ch, name, sent, total|
+        ssh.scp.download!(remotefile,"#{Rails.root.to_s}/tmp/#{datafile}.gz") do |ch, name, sent, total|
           #downloaded = format("%.1f", (sent/total)*100)
           #puts "  Downloaded #{downloaded}% ..."          
         end
       end
       
-      dbsettings = ActiveRecord::Base.configurations[options[:environment]]
-      gunzip_command = "gunzip --force #{Rails.root.to_s}/tmp/#{settings.getdata_file}.gz"
-      db_import_command = "#{settings.getdata_mysqlbin} --default-character-set=utf8 -u#{dbsettings['username']} -p#{dbsettings['password']} #{dbsettings['database']} < #{Rails.root}/tmp/#{settings.getdata_file}"
+      dbsettings = ActiveRecord::Base.configurations[options[:dbsettings]]
+      gunzip_command = "gunzip --force #{Rails.root.to_s}/tmp/#{datafile}.gz"
+      db_import_command = "#{settings.getdata_mysqlbin} --default-character-set=utf8 -u#{dbsettings['username']} -p#{dbsettings['password']} #{dbsettings['database']} < #{Rails.root}/tmp/#{datafile}"
       
       # gunzip
-      say "Unzipping #{Rails.root.to_s}/tmp/#{settings.getdata_file}.gz..."
+      say "Unzipping #{Rails.root.to_s}/tmp/#{datafile}.gz..."
       run(gunzip_command, :verbose => false)
       
       # dump
