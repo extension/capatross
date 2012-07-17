@@ -9,6 +9,8 @@ require 'capatross/version'
 require 'capatross/options'
 require 'capatross/deep_merge' unless defined?(DeepMerge)
 require 'rest-client'
+require 'net/scp'
+require 'mathn'
 
 module Capatross
   class CLI < Thor
@@ -21,6 +23,13 @@ module Capatross
     
     no_tasks do
       
+      def load_rails(environment)
+        if !ENV["RAILS_ENV"] || ENV["RAILS_ENV"] == ""
+          ENV["RAILS_ENV"] = environment
+        end
+        require "./config/environment"
+      end
+          
       def logsdir
         './capatross_logs'
       end
@@ -70,6 +79,16 @@ module Capatross
         end
         
         deploy_logs
+      end
+      
+      def check_settings(settings_to_check)
+        settings_to_check.each do |check_setting|
+          if(settings.send(check_setting).nil?)
+            puts "Please set #{check_setting} in your capatross.yml or capatross.local.yml"
+            return false
+          end
+        end
+        true
       end
       
       def settings
@@ -188,8 +207,50 @@ module Capatross
           end
         end
       end
-      
     end
+    
+    
+    desc "getdata", "Download and replace my local database with new data"
+    method_option :environment,:default => 'development', :aliases => "-e", :desc => "Rails environment"
+    def getdata
+      load_rails(options[:environment])
+      
+      # check for required settings
+      exit(1) if !check_settings(['getdata_host','getdata_file','getdata_path','getdata_user','getdata_mysqlbin'])
+      
+      # download the file
+      remotefile = "#{settings.getdata_path}/#{settings.getdata_file}.gz"
+      say "Downloading #{remotefile} from #{settings.getdata_host}..."
+      Net::SSH.start(settings.getdata_host, settings.getdata_user, :port => 24) do |ssh|
+        ssh.scp.download!(remotefile,"#{Rails.root.to_s}/tmp/#{settings.getdata_file}.gz") do |ch, name, sent, total|
+          downloaded = format("%.1f", (sent/total)*100)
+          puts "  Downloaded #{downloaded}% ..."          
+        end
+      end
+      
+      dbsettings = ActiveRecord::Base.configurations[options[:environment]]
+      gunzip_command = "gunzip --force #{Rails.root.to_s}/tmp/#{settings.getdata_file}.gz"
+      db_import_command = "#{settings.getdata_mysqlbin} --default-character-set=utf8 -u#{dbsettings['username']} -p#{dbsettings['password']} #{dbsettings['database']} < #{Rails.root}/tmp/#{settings.getdata_file}"
+      
+      # gunzip
+      say "Unzipping #{Rails.root.to_s}/tmp/#{settings.getdata_file}.gz..."
+      run(gunzip_command, :verbose => false)
+      
+      # dump
+      say "Dumping the tables from #{dbsettings['database']}..."
+      ActiveRecord::Base.connection.tables.each do |table|
+        say "  dropping #{table}..."
+        ActiveRecord::Base.connection.execute("DROP table #{table};")
+      end
+      
+      # import
+      say "Importing data into #{dbsettings['database']} (this might take a while)..."
+      run(db_import_command, :verbose => false)
+    end
+    
+      
+      
+      
     # 
     # desc "prune", "prune old deploy logs"
     # def prune
