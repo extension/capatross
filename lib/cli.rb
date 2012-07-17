@@ -220,11 +220,11 @@ module Capatross
       
       # download the file
       remotefile = "#{settings.getdata_path}/#{settings.getdata_file}.gz"
-      say "Downloading #{remotefile} from #{settings.getdata_host}..."
+      say "Downloading #{remotefile} from #{settings.getdata_host} (this might take a while)..."
       Net::SSH.start(settings.getdata_host, settings.getdata_user, :port => 24) do |ssh|
         ssh.scp.download!(remotefile,"#{Rails.root.to_s}/tmp/#{settings.getdata_file}.gz") do |ch, name, sent, total|
-          downloaded = format("%.1f", (sent/total)*100)
-          puts "  Downloaded #{downloaded}% ..."          
+          #downloaded = format("%.1f", (sent/total)*100)
+          #puts "  Downloaded #{downloaded}% ..."          
         end
       end
       
