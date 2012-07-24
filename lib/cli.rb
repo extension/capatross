@@ -133,7 +133,40 @@ module Capatross
           end
         end
       end
-        
+      
+      # from:
+      # http://stackoverflow.com/questions/10262235/printing-an-ascii-spinning-cursor-in-the-console
+      def show_wait_spinner(fps=10)
+        chars = %w[| / - \\]
+        delay = 1.0/fps
+        iter = 0
+        spinner = Thread.new do
+          while iter do  # Keep spinning until told otherwise
+            print chars[(iter+=1) % chars.length]
+            sleep delay
+            print "\b"
+          end
+        end
+        yield.tap{       # After yielding to the block, save the return value
+          iter = false   # Tell the thread to exit, cleaning up after itself…
+          spinner.join   # …and wait for it to do so.
+        }                # Use the block's return value as the method's
+      end
+      
+      # code from: https://github.com/ripienaar/mysql-dump-split
+      def humanize_bytes(bytes)
+        if(bytes != 0)
+          units = %w{B KB MB GB TB}
+          e = (Math.log(bytes)/Math.log(1024)).floor
+          s = "%.1f"%(bytes.to_f/1024**e)
+          s.sub(/\.?0*$/,units[e])
+        end
+      end
+      
+      def percentify(number)
+        s = "%.0f\%"%(number*100)
+      end
+              
     end
 
 
@@ -217,7 +250,7 @@ module Capatross
     
     desc "getdata", "Download and replace my local database with new data"
     method_option :environment,:default => 'development', :aliases => "-e", :desc => "Rails environment"
-    method_option :dbsettings,:default => 'development', :aliases => "-d", :desc => "database.yml settings"
+    method_option :db,:default => 'development', :desc => "database.yml connection settings to use"
     def getdata
       load_rails(options[:environment])
       
@@ -226,29 +259,33 @@ module Capatross
       
       # download the file
       if(!settings.getdata_files.nil?)
-        datafile = settings.getdata_files.send(options[:dbsettings])
+        datafile = settings.getdata_files.send(options[:db])
         if(datafile.nil?)
-          puts "No datafile specified for #{options[:dbsettings]}"
+          puts "No datafile specified for #{options[:db]}"
           exit(1)
         end
       elsif(!settings.getdata_file.nil?)
         datafile = settings.getdata_file
       else
-        puts "Please set getdata_files['#{options[:dbsettings]}'] or getdata_file in the capatross settings"
+        puts "Please set getdata_files['#{options[:db]}'] or getdata_file in the capatross settings"
         exit(1)
       end
         
       remotefile = "#{settings.getdata_path}/#{datafile}.gz"
-      say "Downloading #{remotefile} from #{settings.getdata_host} (this might take a while)..."
+      say "Downloading #{remotefile} from #{settings.getdata_host}..."
       Net::SSH.start(settings.getdata_host, settings.getdata_user, :port => 24) do |ssh|
+        print "Downloaded "
         ssh.scp.download!(remotefile,"#{Rails.root.to_s}/tmp/#{datafile}.gz") do |ch, name, sent, total|
-          #downloaded = format("%.1f", (sent/total)*100)
-          #puts "  Downloaded #{downloaded}% ..."          
+          print "\r"   
+          print "Downloaded "
+          print "#{percentify(sent/total)} #{humanize_bytes(sent)} of #{humanize_bytes(total)}"
         end
+        puts " ...done!"
       end
       
-      dbsettings = ActiveRecord::Base.configurations[options[:dbsettings]]
+      dbsettings = ActiveRecord::Base.configurations[options[:db]]
       gunzip_command = "gunzip --force #{Rails.root.to_s}/tmp/#{datafile}.gz"
+      pv_command = '/usr/local/bin/pv'
       db_import_command = "#{settings.getdata_mysqlbin} --default-character-set=utf8 -u#{dbsettings['username']} -p#{dbsettings['password']} #{dbsettings['database']} < #{Rails.root}/tmp/#{datafile}"
       
       # gunzip
@@ -257,14 +294,18 @@ module Capatross
       
       # dump
       say "Dumping the tables from #{dbsettings['database']}..."
+      ActiveRecord::Base.establish_connection(options[:db])
       ActiveRecord::Base.connection.tables.each do |table|
         say "  dropping #{table}..."
         ActiveRecord::Base.connection.execute("DROP table #{table};")
       end
       
       # import
-      say "Importing data into #{dbsettings['database']} (this might take a while)..."
-      run(db_import_command, :verbose => false)
+      say "Importing data into #{dbsettings['database']} (this might take a while)... "
+      show_wait_spinner {
+        run(db_import_command, :verbose => false)
+      }
+      puts " done!"
     end
     
       
