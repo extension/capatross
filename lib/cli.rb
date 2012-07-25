@@ -11,6 +11,7 @@ require 'capatross/deep_merge' unless defined?(DeepMerge)
 require 'rest-client'
 require 'net/scp'
 require 'mathn'
+require 'pp'
 
 module Capatross
   class CLI < Thor
@@ -85,17 +86,7 @@ module Capatross
         
         deploy_logs
       end
-      
-      def check_settings(settings_to_check)
-        settings_to_check.each do |check_setting|
-          if(settings.send(check_setting).nil?)
-            puts "Please set #{check_setting} in your capatross.yml or capatross.local.yml"
-            return false
-          end
-        end
-        true
-      end
-      
+            
       def settings
         if(@settings.nil?)
           @settings = Capatross::Options.new
@@ -253,27 +244,24 @@ module Capatross
     method_option :db,:default => 'development', :desc => "database.yml connection settings to use"
     def getdata
       load_rails(options[:environment])
-      
-      # check for required settings
-      exit(1) if !check_settings(['getdata_host','getdata_path','getdata_user','getdata_mysqlbin'])
-      
+            
       # download the file
-      if(!settings.getdata_files.nil?)
-        datafile = settings.getdata_files.send(options[:db])
+      if(!settings.getdata.dbfiles.nil?)
+        datafile = settings.getdata.dbfiles.send(options[:db])
         if(datafile.nil?)
           puts "No datafile specified for #{options[:db]}"
           exit(1)
         end
-      elsif(!settings.getdata_file.nil?)
-        datafile = settings.getdata_file
+      elsif(!settings.getdata.dbfile.nil?)
+        datafile = settings.getdata.dbfile
       else
-        puts "Please set getdata_files['#{options[:db]}'] or getdata_file in the capatross settings"
+        puts "Please set getdata.files['#{options[:db]}'] or getdata.file in the capatross settings"
         exit(1)
       end
         
-      remotefile = "#{settings.getdata_path}/#{datafile}.gz"
-      say "Downloading #{remotefile} from #{settings.getdata_host}..."
-      Net::SSH.start(settings.getdata_host, settings.getdata_user, :port => 24) do |ssh|
+      remotefile = "#{settings.getdata.path}/#{datafile}.gz"
+      say "Downloading #{remotefile} from #{settings.getdata.host}..."
+      Net::SSH.start(settings.getdata.host, settings.getdata.user, :port => 24) do |ssh|
         print "Downloaded "
         ssh.scp.download!(remotefile,"#{Rails.root.to_s}/tmp/#{datafile}.gz") do |ch, name, sent, total|
           print "\r"   
@@ -286,19 +274,20 @@ module Capatross
       dbsettings = ActiveRecord::Base.configurations[options[:db]]
       gunzip_command = "gunzip --force #{Rails.root.to_s}/tmp/#{datafile}.gz"
       pv_command = '/usr/local/bin/pv'
-      db_import_command = "#{settings.getdata_mysqlbin} --default-character-set=utf8 -u#{dbsettings['username']} -p#{dbsettings['password']} #{dbsettings['database']} < #{Rails.root}/tmp/#{datafile}"
+      db_import_command = "#{settings.getdata.mysqlbin} --default-character-set=utf8 -u#{dbsettings['username']} -p#{dbsettings['password']} #{dbsettings['database']} < #{Rails.root}/tmp/#{datafile}"
       
       # gunzip
       say "Unzipping #{Rails.root.to_s}/tmp/#{datafile}.gz..."
       run(gunzip_command, :verbose => false)
       
       # dump
-      say "Dumping the tables from #{dbsettings['database']}..."
+      say "Dumping the tables from #{dbsettings['database']}... "
       ActiveRecord::Base.establish_connection(options[:db])
       ActiveRecord::Base.connection.tables.each do |table|
-        say "  dropping #{table}..."
         ActiveRecord::Base.connection.execute("DROP table #{table};")
       end
+      say "done!"
+
       
       # import
       say "Importing data into #{dbsettings['database']} (this might take a while)... "
@@ -307,13 +296,17 @@ module Capatross
       }
       puts " done!"
     end
-    
-      
-      
-      
+
+    desc "showsettings", "Show settings"
+    def showsettings
+      pp settings.to_hash
+    end
+     
+         
     # 
     # desc "prune", "prune old deploy logs"
     # def prune
+    # TODO
     # end
               
   end

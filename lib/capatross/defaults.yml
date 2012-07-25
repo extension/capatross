@@ -2,3 +2,8 @@ copy_log_to_server: true
 appkey: 'not_specified'
 albatross_uri: 'http://deploys.extension.org' 
 albatross_deploy_path: '/deploys'
+getdata:
+  host: 'share.extension.org'
+  user: 'pacecar'
+  path: '/home/pacecar/dbdumps'
+  mysqlbin: '/Applications/MAMP/Library/bin/mysql'
