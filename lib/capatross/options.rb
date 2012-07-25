@@ -43,7 +43,7 @@ module Capatross
       
     def files
       if(@files.nil? or @files.empty?)
-        @files = ["#{File.join(File.dirname(__FILE__), "defaults.yml").to_s}","./config/capatross.yml","./config/capatross.local.yml"]
+        @files = ["#{File.join(File.dirname(__FILE__), "defaults.yml").to_s}","./config/capatross.yml","./config/capatross.local.yml",File.expand_path("~/.capatross.yml")]
       end
       @files
     end
@@ -95,7 +95,7 @@ module Capatross
     def to_hash
       result = {}
       marshal_dump.each do |k, v|
-        result[k] = v.instance_of?(RailsConfig::Options) ? v.to_hash : v
+        result[k] = v.instance_of?(Capatross::Options) ? v.to_hash : v
       end
       result
     end
@@ -107,9 +107,17 @@ module Capatross
 
     def merge!(hash)
       current = to_hash
-      DeepMerge.deep_merge!(current, hash.dup)
-      marshal_load(__convert(hash).marshal_dump)
+      DeepMerge.deep_merge!(hash.dup, current)
+      marshal_load(__convert(current).marshal_dump)
       self
+    end
+
+    def [](param)
+      send("#{param}")
+    end
+
+    def []=(param, value)
+      send("#{param}=", value)
     end
     
     protected
@@ -119,6 +127,7 @@ module Capatross
       s = self.class.new
 
       h.each do |k, v|
+        k = k.to_s if !k.respond_to?(:to_sym) && k.respond_to?(:to_s)
         s.new_ostruct_member(k)
 
         if v.is_a?(Hash)
