@@ -28,16 +28,19 @@ module Capatross
         if !ENV["RAILS_ENV"] || ENV["RAILS_ENV"] == ""
           ENV["RAILS_ENV"] = environment
         end
+
+        # there are differences in the require semantics between Ruby 1.8 and Ruby 1.9
+        if(RUBY_VERSION =~ %r{1\.9})
+          loadrails = "./config/environment"
+        elsif(RUBY_VERSION =~ %r{1\.8})
+          loadrails = "config/environment"
+        else
+          puts "Unknown ruby version #{RUBY_VERSION}"
+          exit(1)
+        end
+
         begin
-          # there are differences in the require semantics between Ruby 1.8 and Ruby 1.9
-          if(RUBY_VERSION =~ %r{1\.9})
-            require "./config/environment"
-          elsif(RUBY_VERSION =~ %r{1\.8})
-            require "config/environment"
-          else
-            puts "Unknown ruby version #{RUBY_VERSION}"
-            exit(1)
-          end
+          require loadrails
         rescue LoadError
           puts 'capatross uses rails for certain features, it appears you are not at the root of a rails application, exiting...'
           exit(1)
