@@ -15,9 +15,9 @@ require 'capatross/core'
 
 module Capatross
   def self.extended(configuration)
-    configuration.load do    
+    configuration.load do
       set :capatross_core, Capatross::Core.new
-      set :capatross_deployer, capatross_core.deployer    
+      set :capatross_deployer, capatross_core.deployer
     end
   end
 end

@@ -1,6 +1,6 @@
 copy_log_to_server: true
 appkey: 'not_specified'
-albatross_uri: 'http://deploys.extension.org' 
+albatross_uri: 'http://deploys.extension.org'
 albatross_deploy_path: '/deploys'
 getdata:
   host: 'share.extension.org'

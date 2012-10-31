@@ -2,7 +2,7 @@
 # The core of options.rb comes from rails_config, https://github.com/railsjedi/rails_config
 # Copyright (c) 2010 Jacques Crocker, released under the MIT license
 # Additional Modifications (c) 2012 Jason Adam Young
-# 
+#
 # eXtension Modifications Copyright (c) 2012 North Carolina State University
 # === LICENSE:
 # see LICENSE file
@@ -31,23 +31,23 @@ module Capatross
 
     end
   end
-  
+
   class Options < OpenStruct
     attr_accessor :defaults
-        
+
     def files=(*files)
       if(!files.empty?)
         @files = [files].flatten.compact.uniq
       end
     end
-      
+
     def files
       if(@files.nil? or @files.empty?)
         @files = ["#{File.join(File.dirname(__FILE__), "defaults.yml").to_s}","./config/capatross.yml","./config/capatross.local.yml",File.expand_path("~/.capatross.yml")]
       end
       @files
     end
-    
+
     def empty?
       marshal_dump.empty?
     end
@@ -56,15 +56,15 @@ module Capatross
       self.files=files
       self.load!
     end
-      
+
     def reload_from_files(*files)
       self.files=files
       self.reload!
     end
-    
+
     def reset_sources!
       self.files.each do |file|
-        source = (Sources::YAMLSource.new(file)) if file.is_a?(String)          
+        source = (Sources::YAMLSource.new(file)) if file.is_a?(String)
         @config_sources ||= []
         @config_sources << source
       end
@@ -119,7 +119,7 @@ module Capatross
     def []=(param, value)
       send("#{param}=", value)
     end
-    
+
     protected
 
     # Recursively converts Hashes to Options (including Hashes inside Arrays)

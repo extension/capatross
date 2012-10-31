@@ -9,7 +9,7 @@
 #
 
 Capistrano::Configuration.instance(:must_exist).load do
-  namespace :deploy do    
+  namespace :deploy do
     # This is here to hook into the logger for deploy tasks
     before("deploy") do
       Capistrano::CapatrossLogger.setup(self)
@@ -17,4 +17,4 @@ Capistrano::Configuration.instance(:must_exist).load do
     end
   end
 end
-    
+

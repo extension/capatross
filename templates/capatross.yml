@@ -1,10 +1,10 @@
 #### config/capatross.yml
-## User this file for shared campout settings for the project. It's 
+## User this file for shared campout settings for the project. It's
 ## recommended that you add this file to your SCM.
 ##
-## personal overrides or other settings can be placed 
-## within a config/capatross.local.yml file.  
-## 
+## personal overrides or other settings can be placed
+## within a config/capatross.local.yml file.
+##
 ### global action settings
 ##
 ## copy_log_to_server:
@@ -20,7 +20,7 @@
 appkey: 'notset'
 ##
 ## albatross_uri:
-##   The uri for the albatross server. Override in capatross.local.yml for 
+##   The uri for the albatross server. Override in capatross.local.yml for
 ##   local development
 ## default:
-# albatross_uri: 'http://deploys.extension.org' 
+# albatross_uri: 'http://deploys.extension.org'

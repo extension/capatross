@@ -1,7 +1,7 @@
 # deep_merge was written by Steve Midgley, and is now maintained by Daniel DeLeo.
 # The official home of deep_merge on the internet is now
 # https://github.com/danielsdeleo/deep_merge
-# 
+#
 # Copyright (c) 2008 Steve Midgley, released under the MIT license
 
 module DeepMerge
@@ -68,7 +68,7 @@ module DeepMerge
   #   dest   = {:x => [{:z => 2}]}
   #   dest.deep_merge!(source, {:merge_hash_arrays => true})
   #   Results: {:x => [{:y => 1, :z => 2}]}
-  # 
+  #
   # There are many tests for this library - and you can learn more about the features
   # and usages of deep_merge! by just browsing the test examples
   def self.deep_merge!(source, dest, options = {})

@@ -6,7 +6,7 @@
 
 module Capatross
   class GitUtils
-      
+
     def initialize(path)
       @path = path
       if(localrepo)
@@ -15,7 +15,7 @@ module Capatross
         return nil
       end
     end
-    
+
     def localrepo
       if(@localrepo.nil?)
         begin
@@ -25,15 +25,15 @@ module Capatross
       end
       @localrepo
     end
-    
+
     def gitconfig
       @gitconfig ||= Grit::Config.new(localrepo)
     end
-   
+
     def user_name
       @user_name ||= gitconfig.fetch('user.name')
     end
-    
+
     def user_email
       @user_email ||= gitconfig.fetch('user.email')
     end
@@ -41,6 +41,6 @@ module Capatross
   end
 end
 
-        
-        
-        
+
+
+
