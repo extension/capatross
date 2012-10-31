@@ -3,7 +3,6 @@ appkey: 'not_specified'
 albatross_uri: 'http://deploys.extension.org'
 albatross_deploy_path: '/deploys'
 getdata:
-  host: 'share.extension.org'
+  host: 'data.engineering.extension.org'
   user: 'pacecar'
-  path: '/home/pacecar/dbdumps'
   mysqlbin: '/Applications/MAMP/Library/bin/mysql'

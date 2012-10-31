@@ -12,6 +12,7 @@ require 'rest-client'
 require 'net/scp'
 require 'mathn'
 require 'pp'
+require 'mysql2'
 
 module Capatross
   class CLI < Thor
@@ -45,6 +46,36 @@ module Capatross
           puts 'capatross uses rails for certain features, it appears you are not at the root of a rails application, exiting...'
           exit(1)
         end
+      end
+
+      def drop_tables_rails(environment,dbsettings)
+        say "Dumping the tables from #{dbsettings['database']}... "
+        ActiveRecord::Base.establish_connection(environment)
+        ActiveRecord::Base.connection.tables.each do |table|
+          ActiveRecord::Base.connection.execute("DROP table #{table};")
+        end
+        say "done!"
+      end
+
+      def drop_tables_mysql2(dbsettings)
+        say "Dumping the tables from #{dbsettings['database']}... "
+        connection_settings = {}
+        dbsettings.each do |key,value|
+          if(key != 'database')
+            connection_settings[key.to_sym] = value
+          end
+        end
+        client = Mysql2::Client.new(connection_settings)
+        result = client.query("SHOW TABLES FROM #{dbsettings['database']}")
+        tables = []
+        result.each do |table_hash|
+          tables += table_hash.values
+        end
+        result = client.query("USE #{dbsettings['database']};")
+        tables.each do |table|
+          result = client.query("DROP table #{table};")
+        end
+        say "done!"
       end
 
       def logsdir
@@ -118,6 +149,17 @@ module Capatross
           e.response
         end
       end
+
+      def get_dumpinfo(options = {})
+        request_params = options.map{|key,value| "#{key}=#{value}"}.join('&')
+        begin
+          result = RestClient.get("#{settings.albatross_uri}/dumps/dumpinfo?#{request_params}")
+        rescue=> e
+          result = e.response
+        end
+        JSON.parse(result)
+      end
+
 
       def check_post_result(response)
         if(!response.code == 200)
@@ -251,30 +293,86 @@ module Capatross
 
 
     desc "getdata", "Download and replace my local database with new data"
-    method_option :environment,:default => 'development', :aliases => "-e", :desc => "Rails environment"
-    method_option :db,:default => 'development', :desc => "database.yml connection settings to use"
+    method_option :environment,:default => 'development', :aliases => "-e", :desc => "Rails environment if running a Rails application"
+    method_option :application,:default => 'this', :aliases => "-a", :desc => "Application ('this' assumes you running at the root of a rails application)"
+    method_option :dbtype,:default => 'production', :aliases => "-t", :desc => "Database type you want to import"
     def getdata
-      load_rails(options[:environment])
+      is_rails_app = false
 
-      # download the file
-      if(!settings.getdata.dbfiles.nil?)
-        datafile = settings.getdata.dbfiles.send(options[:db])
-        if(datafile.nil?)
-          puts "No datafile specified for #{options[:db]}"
+      # get the database settings
+      if(options[:application] == 'this')
+        application = 'this'
+        load_rails(options[:environment])
+        is_rails_app = true
+        dbsettings = ActiveRecord::Base.configurations[options[:environment]]
+
+        if(settings.appkey.nil?)
+          puts "Please set appkey in your capatross settings"
           exit(1)
         end
-      elsif(!settings.getdata.dbfile.nil?)
-        datafile = settings.getdata.dbfile
+
       else
-        puts "Please set getdata.files['#{options[:db]}'] or getdata.file in the capatross settings"
+        application = options[:application].downcase
+
+        if(settings.getdata.dbsettings.nil?)
+          puts "Please set getdata.dbsettings in your capatross settings"
+          exit(1)
+        end
+
+        if(settings.getdata.applications.nil?)
+          puts "Please set getdata.applications['#{application}'] in your capatross settings"
+          exit(1)
+        end
+
+        dbname = settings.getdata.applications.send(application)
+        if(dbname.nil?)
+          puts "No databased specified in your capatross settings for #{application}"
+          exit(1)
+        end
+
+        dbsettings = {}
+        settings.getdata.dbsettings.to_hash.each do |key,value|
+          dbsettings[key.to_s] = value
+        end
+        dbsettings['database'] = dbname
+      end
+
+
+      # get the file details
+      if(application == 'this')
+        dumpinfo_options = {'dbtype' => options[:dbtype], 'appkey' => settings.appkey}
+      else
+        dumpinfo_options = {'dbtype' => options[:dbtype], 'appname' => application}
+      end
+
+      result = get_dumpinfo(dumpinfo_options)
+      if(!result['success'])
+        puts "Unable to get database dump information for #{application}. Reason #{result['message'] || 'unknown'}"
         exit(1)
       end
 
-      remotefile = "#{settings.getdata.path}/#{datafile}.gz"
-      say "Downloading #{remotefile} from #{settings.getdata.host}..."
+      if(!result['file'])
+        puts "Missing file in dump information for #{application}."
+        exit(1)
+      end
+
+      begin
+        last_dumped_at = Time.parse(result['last_dumped_at'])
+        last_dumped_string = last_dumped_at.strftime("%Y/%m/%d %H:%M %Z")
+      rescue
+        last_dumped_string = 'unknown'
+      end
+
+
+      remotefile = result['file']
+      local_compressed_file = File.basename(remotefile)
+      local_file = File.basename(local_compressed_file,'.gz')
+
+      say "Data dump for #{application} Size: #{humanize_bytes(result['size'])} Last dumped at: #{last_dumped_string}"
+      say "Starting download of #{remotefile} from #{settings.getdata.host}..."
       Net::SSH.start(settings.getdata.host, settings.getdata.user, :port => 24) do |ssh|
         print "Downloaded "
-        ssh.scp.download!(remotefile,"#{Rails.root.to_s}/tmp/#{datafile}.gz") do |ch, name, sent, total|
+        ssh.scp.download!(remotefile,"/tmp/#{local_compressed_file}") do |ch, name, sent, total|
           print "\r"
           print "Downloaded "
           print "#{percentify(sent/total)} #{humanize_bytes(sent)} of #{humanize_bytes(total)}"
@@ -282,22 +380,20 @@ module Capatross
         puts " ...done!"
       end
 
-      dbsettings = ActiveRecord::Base.configurations[options[:db]]
-      gunzip_command = "gunzip --force #{Rails.root.to_s}/tmp/#{datafile}.gz"
+      gunzip_command = "gunzip --force /tmp/#{local_compressed_file}"
       pv_command = '/usr/local/bin/pv'
-      db_import_command = "#{settings.getdata.mysqlbin} --default-character-set=utf8 -u#{dbsettings['username']} -p#{dbsettings['password']} #{dbsettings['database']} < #{Rails.root}/tmp/#{datafile}"
+      db_import_command = "#{settings.getdata.mysqlbin} --default-character-set=utf8 -u#{dbsettings['username']} -p#{dbsettings['password']} #{dbsettings['database']} < /tmp/#{local_file}"
 
       # gunzip
-      say "Unzipping #{Rails.root.to_s}/tmp/#{datafile}.gz..."
+      say "Unzipping /tmp/#{local_compressed_file}..."
       run(gunzip_command, :verbose => false)
 
       # dump
-      say "Dumping the tables from #{dbsettings['database']}... "
-      ActiveRecord::Base.establish_connection(options[:db])
-      ActiveRecord::Base.connection.tables.each do |table|
-        ActiveRecord::Base.connection.execute("DROP table #{table};")
+      if(is_rails_app)
+        drop_tables_rails(options[:environment],dbsettings)
+      else
+        drop_tables_mysql2(dbsettings)
       end
-      say "done!"
 
 
       # import
@@ -314,6 +410,40 @@ module Capatross
     end
 
 
+    desc "dumpinfo", "Get information about a database dump for an application"
+    method_option :application,:default => 'this', :aliases => "-a", :desc => "Application ('this' assumes you running at the root of a rails application)"
+    method_option :dbtype,:default => 'production', :aliases => "-t", :desc => "Database type you want to import"
+    def dumpinfo
+      application = options[:application].downcase
+
+      # get the file details
+      if(application == 'this')
+        dumpinfo_options = {'dbtype' => options[:dbtype], 'appkey' => settings.appkey}
+      else
+        dumpinfo_options = {'dbtype' => options[:dbtype], 'appname' => application}
+      end
+
+      result = get_dumpinfo(dumpinfo_options)
+      if(!result['success'])
+        puts "Unable to get database dump information for #{application}. Reason #{result['message'] || 'unknown'}"
+        exit(1)
+      end
+
+      if(!result['file'])
+        puts "Missing file in dump information for #{application}."
+        exit(1)
+      end
+
+      begin
+        last_dumped_at = Time.parse(result['last_dumped_at'])
+        last_dumped_string = last_dumped_at.strftime("%A, %B %e, %Y, %l:%M %p %Z")
+      rescue
+        last_dumped_string = 'unknown'
+      end
+
+      pp result.to_hash
+
+    end
     #
     # desc "prune", "prune old deploy logs"
     # def prune
