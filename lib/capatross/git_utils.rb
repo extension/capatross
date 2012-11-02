@@ -3,6 +3,7 @@
 # Original (c) 2012 Jason Adam Young
 # === LICENSE:
 # see LICENSE file
+require 'grit'
 
 module Capatross
   class GitUtils

@@ -8,6 +8,7 @@ require 'json'
 require 'capatross/version'
 require 'capatross/options'
 require 'capatross/deep_merge' unless defined?(DeepMerge)
+require 'capatross/git_utils'
 require 'rest-client'
 require 'net/scp'
 require 'mathn'
@@ -150,11 +151,22 @@ module Capatross
         end
       end
 
+      def post_a_dump_request(request_options)
+        begin
+          result = RestClient.post("#{settings.albatross_uri}/dumps/do",
+                                   request_options.to_json,
+                                   :content_type => :json, :accept => :json)
+        rescue StandardError => e
+          result = e.response
+        end
+        JSON.parse(result)
+      end
+
       def get_dumpinfo(options = {})
         request_params = options.map{|key,value| "#{key}=#{value}"}.join('&')
         begin
           result = RestClient.get("#{settings.albatross_uri}/dumps/dumpinfo?#{request_params}")
-        rescue=> e
+        rescue StandardError => e
           result = e.response
         end
         JSON.parse(result)
@@ -358,7 +370,7 @@ module Capatross
 
       begin
         last_dumped_at = Time.parse(result['last_dumped_at'])
-        last_dumped_string = last_dumped_at.strftime("%Y/%m/%d %H:%M %Z")
+        last_dumped_string = last_dumped_at.localtime.strftime("%Y/%m/%d %H:%M %Z")
       rescue
         last_dumped_string = 'unknown'
       end
@@ -444,7 +456,31 @@ module Capatross
       pp result.to_hash
 
     end
-    #
+
+
+    desc "dodump", "Request a database dump"
+    method_option :application,:default => 'this', :aliases => "-a", :desc => "Application ('this' assumes you running at the root of a rails application)"
+    method_option :dbtype,:default => 'production', :aliases => "-t", :desc => "Database type you want to dump"
+    def dodump
+      application = options[:application].downcase
+      if(gitinfo = Capatross::GitUtils.new('.'))
+        dumper_email = gitinfo.user_email
+      end
+      # get the file details
+      if(application == 'this')
+        dodump_options = {'dbtype' => options[:dbtype], 'appkey' => settings.appkey, 'dumper_email' => dumper_email}
+      else
+        dodump_options = {'dbtype' => options[:dbtype], 'appname' => application, 'dumper_email' => dumper_email}
+      end
+
+      result = post_a_dump_request(dodump_options)
+      if(!result['success'])
+        puts "Unable to request a #{options[:dbtype]} database dump for #{application}. Reason #{result['message'] || 'unknown'}"
+      else
+        puts "#{result['message'] || 'Unknown result'}"
+      end
+    end
+
     # desc "prune", "prune old deploy logs"
     # def prune
     # TODO
