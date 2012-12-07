@@ -49,6 +49,14 @@ module Capatross
         end
       end
 
+      def getdata_key_check
+        if(settings.getdata.datakey.nil?)
+          puts "Please set your personal datakey in your capatross settings"
+          exit(1)
+        end
+      end
+
+
       def drop_tables_rails(environment,dbsettings)
         say "Dumping the tables from #{dbsettings['database']}... "
         ActiveRecord::Base.establish_connection(environment)
@@ -154,6 +162,17 @@ module Capatross
       def post_a_dump_request(request_options)
         begin
           result = RestClient.post("#{settings.albatross_uri}/dumps/do",
+                                   request_options.to_json,
+                                   :content_type => :json, :accept => :json)
+        rescue StandardError => e
+          result = e.response
+        end
+        JSON.parse(result)
+      end
+
+      def post_a_copy_request(request_options)
+        begin
+          result = RestClient.post("#{settings.albatross_uri}/dumps/copy",
                                    request_options.to_json,
                                    :content_type => :json, :accept => :json)
         rescue StandardError => e
@@ -310,7 +329,8 @@ module Capatross
     method_option :dbtype,:default => 'production', :aliases => "-t", :desc => "Database type you want to import"
     def getdata
       is_rails_app = false
-
+      getdata_key_check
+      
       # get the database settings
       if(options[:application] == 'this')
         application = 'this'
@@ -351,10 +371,11 @@ module Capatross
 
 
       # get the file details
+      dumpinfo_options = {'dbtype' => options[:dbtype], 'data_key' => settings.getdata.data_key}
       if(application == 'this')
-        dumpinfo_options = {'dbtype' => options[:dbtype], 'appkey' => settings.appkey}
+        dumpinfo_options['appkey'] = settings.appkey
       else
-        dumpinfo_options = {'dbtype' => options[:dbtype], 'appname' => application}
+        dumpinfo_options['appname'] = application
       end
 
       result = get_dumpinfo(dumpinfo_options)
@@ -429,15 +450,17 @@ module Capatross
       application = options[:application].downcase
 
       # get the file details
+      dumpinfo_options = {'dbtype' => options[:dbtype], 'data_key' => settings.getdata.data_key}
       if(application == 'this')
-        dumpinfo_options = {'dbtype' => options[:dbtype], 'appkey' => settings.appkey}
+        dumpinfo_options['appkey'] = settings.appkey
       else
-        dumpinfo_options = {'dbtype' => options[:dbtype], 'appname' => application}
+        dumpinfo_options['appname'] = application
       end
 
       result = get_dumpinfo(dumpinfo_options)
       if(!result['success'])
-        puts "Unable to get database dump information for #{application}. Reason #{result['message'] || 'unknown'}"
+        puts "Unable to get database dump information for #{application}."
+        puts "Reason: #{result['message'] || 'unknown'}"
         exit(1)
       end
 
@@ -463,15 +486,14 @@ module Capatross
     method_option :dbtype,:default => 'production', :aliases => "-t", :desc => "Database type you want to dump"
     def dodump
       application = options[:application].downcase
-      if(gitinfo = Capatross::GitUtils.new('.'))
-        dumper_email = gitinfo.user_email
-      end
+
       # get the file details
+      dumpinfo_options = {'dbtype' => options[:dbtype], 'data_key' => settings.getdata.data_key}
       if(application == 'this')
-        dodump_options = {'dbtype' => options[:dbtype], 'appkey' => settings.appkey, 'dumper_email' => dumper_email}
+        dumpinfo_options['appkey'] = settings.appkey
       else
-        dodump_options = {'dbtype' => options[:dbtype], 'appname' => application, 'dumper_email' => dumper_email}
-      end
+        dumpinfo_options['appname'] = application
+      end      
 
       result = post_a_dump_request(dodump_options)
       if(!result['success'])
@@ -480,6 +502,8 @@ module Capatross
         puts "#{result['message'] || 'Unknown result'}"
       end
     end
+
+
 
     # desc "prune", "prune old deploy logs"
     # def prune
