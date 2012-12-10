@@ -50,7 +50,7 @@ module Capatross
       end
 
       def getdata_key_check
-        if(settings.getdata.datakey.nil?)
+        if(settings.getdata.data_key.nil?)
           puts "Please set your personal datakey in your capatross settings"
           exit(1)
         end
@@ -447,6 +447,7 @@ module Capatross
     method_option :application,:default => 'this', :aliases => "-a", :desc => "Application ('this' assumes you running at the root of a rails application)"
     method_option :dbtype,:default => 'production', :aliases => "-t", :desc => "Database type you want to import"
     def dumpinfo
+      getdata_key_check
       application = options[:application].downcase
 
       # get the file details
@@ -485,6 +486,7 @@ module Capatross
     method_option :application,:default => 'this', :aliases => "-a", :desc => "Application ('this' assumes you running at the root of a rails application)"
     method_option :dbtype,:default => 'production', :aliases => "-t", :desc => "Database type you want to dump"
     def dodump
+      getdata_key_check
       application = options[:application].downcase
 
       # get the file details
