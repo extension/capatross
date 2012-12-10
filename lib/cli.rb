@@ -489,12 +489,11 @@ module Capatross
       getdata_key_check
       application = options[:application].downcase
 
-      # get the file details
-      dumpinfo_options = {'dbtype' => options[:dbtype], 'data_key' => settings.getdata.data_key}
+      dodump_options = {'dbtype' => options[:dbtype], 'data_key' => settings.getdata.data_key}
       if(application == 'this')
-        dumpinfo_options['appkey'] = settings.appkey
+        dodump_options['appkey'] = settings.appkey
       else
-        dumpinfo_options['appname'] = application
+        dodump_options['appname'] = application
       end      
 
       result = post_a_dump_request(dodump_options)
