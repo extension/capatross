@@ -43,7 +43,7 @@ module Capatross
 
     def files
       if(@files.nil? or @files.empty?)
-        @files = ["#{File.join(File.dirname(__FILE__), "defaults.yml").to_s}","./config/capatross.yml","./config/capatross.local.yml",File.expand_path("~/.capatross.yml")]
+        @files = ["#{File.join(File.dirname(__FILE__), "defaults.yml").to_s}",File.expand_path("~/.capatross.yml"),"./config/capatross.yml","./config/capatross.local.yml"]
       end
       @files
     end
