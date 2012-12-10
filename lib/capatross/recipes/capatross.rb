@@ -14,15 +14,23 @@ Capistrano::Configuration.instance(:must_exist).load do
     ## no descriptions for the following task - meant to be hooked by capistrano
     task :start do
       set(:whereto,capatross_core.whereto(self))
+      if(ENV['BRANCH'])
+        deploy_branch = ENV['BRANCH']
+      else
+        deploy_branch = fetch(:branch)
+      end
+
       capatross_core.merge_deploydata(:capatross_id => capatross_core.capatross_id,
                                       :deployer_email => capatross_core.gitutils.user_email,
                                       :deployer_name =>  capatross_deployer,
                                       :previous_revision => current_revision,
                                       :start => Time.now.utc,
-                                      :location =>  whereto)
+                                      :location =>  whereto,
+                                      :branch => deploy_branch)
       if(ENV['COMMENT'])
         capatross_core.merge_deploydata(:comment => ENV['COMMENT'])
       end
+
       start_posted = capatross_core.post_deploydata
       capatross_core.merge_deploydata(:start_posted => start_posted)
     end
