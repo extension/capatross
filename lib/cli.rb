@@ -504,6 +504,28 @@ module Capatross
       end
     end
 
+    desc "docopy", "Request a database copy from production to development"
+    method_option :application,:default => 'this', :aliases => "-a", :desc => "Application ('this' assumes you running at the root of a rails application)"
+    def docopy
+      getdata_key_check
+      application = options[:application].downcase
+
+      # get the file details
+      docopy_options = {'dbtype' => options[:dbtype], 'data_key' => settings.getdata.data_key}
+      if(application == 'this')
+        docopy_options['appkey'] = settings.appkey
+      else
+        docopy_options['appname'] = application
+      end      
+
+      result = post_a_copy_request(docopy_options)
+      if(!result['success'])
+        puts "Unable to request a #{options[:dbtype]} database dump for #{application}. Reason #{result['message'] || 'unknown'}"
+      else
+        puts "#{result['message'] || 'Unknown result'}"
+      end
+    end
+
 
 
     # desc "prune", "prune old deploy logs"
