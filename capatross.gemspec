@@ -20,4 +20,5 @@ Gem::Specification.new do |gem|
   gem.add_dependency('grit', '>= 2.4')
   gem.add_dependency('rest-client', '>= 1.6.7')
   gem.add_dependency('mysql2', '>= 0.3.11')
+  gem.add_dependency('thor', '>= 0.16.0')
 end
