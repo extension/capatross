@@ -20,7 +20,10 @@ Capistrano::Configuration.instance(:must_exist).load do
         deploy_branch = fetch(:branch)
       end
 
-      capatross_core.merge_deploydata(:capatross_id => capatross_core.capatross_id,
+      application = fetch(:application,'unknown')
+
+      capatross_core.merge_deploydata(:application => application,
+                                      :capatross_id => capatross_core.capatross_id,
                                       :deployer_email => capatross_core.gitutils.user_email,
                                       :deployer_name =>  capatross_deployer,
                                       :previous_revision => current_revision,
@@ -31,7 +34,12 @@ Capistrano::Configuration.instance(:must_exist).load do
         capatross_core.merge_deploydata(:comment => ENV['COMMENT'])
       end
 
-      start_posted = capatross_core.post_deploydata
+      post_deploydata = fetch(:post_deploydata,true)
+      if(post_deploydata)
+        start_posted = capatross_core.post_deploydata
+      else
+        start_posted = false
+      end
       capatross_core.merge_deploydata(:start_posted => start_posted)
     end
 
@@ -46,7 +54,12 @@ Capistrano::Configuration.instance(:must_exist).load do
       end
 
       capatross_core.merge_deploydata(:deploy_log => File.open(logger.log_file_path).read)
-      finish_posted = capatross_core.post_deploydata
+      post_deploydata = fetch(:post_deploydata,true)
+      if(post_deploydata)
+        finish_posted = capatross_core.post_deploydata
+      else
+        finish_posted = false
+      end      
       capatross_core.merge_deploydata(:finish_posted => finish_posted)
       outputfile = capatross_core.write_deploydata
       if(capatross_core.settings.copy_log_to_server)

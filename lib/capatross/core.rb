@@ -85,10 +85,15 @@ module Capatross
 
     def write_deploydata
       outputdir = "./capatross_logs"
-      ouptputfile = File.join(outputdir,"#{deploydata[:capatross_id]}.json")
+      outputfile = File.join(outputdir,"#{deploydata[:capatross_id]}.json")
       FileUtils.mkdir_p(outputdir)
-      File.open(ouptputfile, 'w') {|f| f.write(deploydata.to_json) }
-      ouptputfile
+      File.open(outputfile, 'w') {|f| f.write(deploydata.to_json) }
+      # also write to "application_latest"
+      if(deploydata[:application])
+        latest_outputfile = File.join(outputdir,"#{deploydata[:application]}_latest.json")
+        File.open(latest_outputfile, 'w') {|f| f.write(deploydata.to_json) }
+      end
+      outputfile
     end
 
 
